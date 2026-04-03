@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fire Island Share Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="header-left">
+        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+          <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+        </svg>
+        <div>
+          <h1 class="site-title">Fire Island Share Manager</h1>
+          <p class="site-sub">Summer 2025 · 5 weeks · 4 rooms · $828 / person / week</p>
+        </div>
+      </div>
+      <div class="header-owners" id="header-owners"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="dashboard"></section>
+
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="grid">Grid</button>
+      <button class="tab-btn" data-tab="guests">Guests</button>
+      <button class="tab-btn" data-tab="queue">Interest Queue</button>
+      <button class="tab-btn" data-tab="reimbursement">Reimbursements</button>
+    </nav>
+
+    <div id="tab-content"></div>
+  </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-box" id="modal-box"></div>
+  </div>
+
+  <footer class="site-footer">Rhys · Chris · Michael · Fire Island 2025</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
