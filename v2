@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fire Island Share Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="header-left">
+        <svg class="wave-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+          <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+        </svg>
+        <div>
+          <h1 class="site-title">Fire Island Share Manager</h1>
+          <p class="site-sub">Summer 2025 · 5 weeks · 4 rooms · $828 / person / week</p>
+        </div>
+      </div>
+      <div class="header-owners" id="header-owners"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="dashboard"></section>
+
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="grid">Grid</button>
+      <button class="tab-btn" data-tab="guests">Guests</button>
+      <button class="tab-btn" data-tab="queue">Interest Queue</button>
+      <button class="tab-btn" data-tab="reimbursement">Reimbursements</button>
+    </nav>
+
+    <div id="tab-content"></div>
+  </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-box" id="modal-box"></div>
+  </div>
+
+  <footer class="site-footer">Rhys · Chris · Michael · Fire Island 2025</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const WEEKS = [
+  { id: 1, label: 'May',    dates: '5/28–6/4'   },
+  { id: 2, label: 'June',   dates: '6/18–6/25'  },
+  { id: 3, label: 'July',   dates: '7/9–7/16'   },
+  { id: 4, label: 'August', dates: '8/13–8/20'  },
+  { id: 5, label: 'Sept',   dates: '9/3–9/10'   },
+];
+
+const ROOMS = [
+  { id: 1, owner: 'Rhys',    label: 'Room 1' },
+  { id: 2, owner: 'Rhys',    label: 'Room 2' },
+  { id: 3, owner: 'Chris',   label: 'Room 3' },
+  { id: 4, owner: 'Michael', label: 'Room 4' },
+];
+
+const OWNERS = [
+  { name: 'Rhys',    fronted: 16562.50, rooms: [1, 2], color: '#3b82f6' },
+  { name: 'Chris',   fronted:  8281.25, rooms: [3],    color: '#8b5cf6' },
+  { name: 'Michael', fronted:  8281.25, rooms: [4],    color: '#14b8a6' },
+];
+
+const GUEST_COLORS = [
+  '#fb7185', '#fbbf24', '#84cc16', '#22d3ee',
+  '#e879f9', '#fb923c', '#818cf8', '#f472b6',
+  '#38bdf8', '#c084fc', '#2dd4bf', '#eab308',
+];
+
+const INTEREST_QUEUE = [
+  { id: 1, name: 'Jamie & Paul',     initials: 'JP', spots: 2, weeks: ['July', 'August'], note: '2 spots · July & August' },
+  { id: 2, name: 'Kouros',           initials: 'K',  spots: 1, weeks: ['May', 'June', 'July'], note: '1 spot · May, June & July' },
+  { id: 3, name: 'Andrew & West',    initials: 'AW', spots: 2, weeks: ['June'], note: 'Full room · June' },
+  { id: 4, name: 'Christian & Matt', initials: 'CM', spots: 2, weeks: ['May'],  note: 'Full room · May'  },
+];
+
+const COST  = 828.13;
+const TOTAL = 33125;
+
+const INITIALS_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f43f5e'];
+
+const WEEK_TAG_CLASS = {
+  May: 'tag-pink', June: 'tag-amber', July: 'tag-sky', August: 'tag-violet', Sept: 'tag-teal',
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+const state = {
+  grid: buildInitialGrid(),
+  guestRegistry: {},   // { name: colorIndex }
+  activeTab: 'grid',
+  modal: null,         // { weekId, roomId, slotIdx }
+};
+
+function buildInitialGrid() {
+  const grid = {};
+  WEEKS.forEach(w => {
+    grid[w.id] = {};
+    ROOMS.forEach(r => {
+      grid[w.id][r.id] = [
+        { name: r.owner, paid: false, isOwner: true },
+        { name: r.owner, paid: false, isOwner: true },
+      ];
+    });
+  });
+  return grid;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const getOwner  = name => OWNERS.find(o => o.name === name);
+const getRoom   = id   => ROOMS.find(r => r.id === id);
+const fmt       = n    => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct       = (a, b) => b > 0 ? Math.min(100, Math.round(a / b * 100)) : 0;
+const esc       = s    => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function guestColor(name) {
+  const idx = state.guestRegistry[name] ?? 0;
+  return GUEST_COLORS[idx % GUEST_COLORS.length];
+}
+
+function ensureGuestColor(name) {
+  if (state.guestRegistry[name] !== undefined) return;
+  const used = Object.values(state.guestRegistry);
+  let next = 0;
+  while (used.includes(next)) next++;
+  state.guestRegistry[name] = next;
+}
+
+// ─── Derived data ─────────────────────────────────────────────────────────────
+
+function ownerStats() {
+  return OWNERS.map(owner => {
+    const rooms = ROOMS.filter(r => owner.rooms.includes(r.id));
+    let recovered = 0, totalGuests = 0, paidGuests = 0;
+    rooms.forEach(room => {
+      WEEKS.forEach(week => {
+        state.grid[week.id][room.id].forEach(slot => {
+          if (!slot.isOwner) {
+            totalGuests++;
+            if (slot.paid) { recovered += COST; paidGuests++; }
+          }
+        });
+      });
+    });
+    return { ...owner, recovered, remaining: owner.fronted - recovered, totalGuests, paidGuests };
+  });
+}
+
+function guestRoster() {
+  const map = {};
+  WEEKS.forEach(week => {
+    ROOMS.forEach(room => {
+      state.grid[week.id][room.id].forEach(slot => {
+        if (!slot.isOwner) {
+          if (!map[slot.name]) map[slot.name] = { name: slot.name, slots: [] };
+          map[slot.name].slots.push({ week: week.label, room: room.label, owner: room.owner, paid: slot.paid });
+        }
+      });
+    });
+  });
+  return Object.values(map).map(e => ({
+    ...e,
+    color:     guestColor(e.name),
+    totalOwed: e.slots.length * COST,
+    totalPaid: e.slots.filter(s => s.paid).length * COST,
+  }));
+}
+
+function reimbursements() {
+  const list = [];
+  WEEKS.forEach(week => {
+    ROOMS.forEach(room => {
+      state.grid[week.id][room.id].forEach((slot, slotIdx) => {
+        if (!slot.isOwner) {
+          list.push({
+            guest: slot.name, week: week.label, dates: week.dates,
+            room: room.label, owner: room.owner,
+            ownerColor: getOwner(room.owner).color,
+            amount: COST, paid: slot.paid,
+          });
+        }
+      });
+    });
+  });
+  return list;
+}
+
+// ─── Mutations ────────────────────────────────────────────────────────────────
+
+function saveSlot(name, paid) {
+  const { weekId, roomId, slotIdx } = state.modal;
+  const room    = getRoom(roomId);
+  const trimmed = name.trim();
+  const isOwner = !trimmed;
+
+  if (!isOwner) ensureGuestColor(trimmed);
+
+  state.grid[weekId][roomId][slotIdx] = {
+    name:    isOwner ? room.owner : trimmed,
+    paid:    isOwner ? false : paid,
+    isOwner,
+  };
+
+  closeModal();
+  render();
+}
+
+function togglePaid(weekId, roomId, slotIdx) {
+  const slot = state.grid[weekId][roomId][slotIdx];
+  if (slot.isOwner) return;
+  slot.paid = !slot.paid;
+  render();
+}
+
+function moveGuest(src, dst) {
+  if (src.weekId === dst.weekId && src.roomId === dst.roomId && src.slotIdx === dst.slotIdx) return;
+  const srcSlot = { ...state.grid[src.weekId][src.roomId][src.slotIdx] };
+  const dstSlot = { ...state.grid[dst.weekId][dst.roomId][dst.slotIdx] };
+
+  if (dstSlot.isOwner) {
+    state.grid[dst.weekId][dst.roomId][dst.slotIdx] = srcSlot;
+    state.grid[src.weekId][src.roomId][src.slotIdx] = { name: getRoom(src.roomId).owner, paid: false, isOwner: true };
+  } else {
+    state.grid[dst.weekId][dst.roomId][dst.slotIdx] = srcSlot;
+    state.grid[src.weekId][src.roomId][src.slotIdx] = dstSlot;
+  }
+  render();
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const checkIcon = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M5 13l4 4L19 7"/></svg>`;
+const minusIcon = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M5 12h14"/></svg>`;
+const editIcon  = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M15.232 5.232l3.536 3.536M9 11l6.536-6.536a2 2 0 012.828 2.828L11.828 13.828a4 4 0 01-1.414.94l-3.414.854.854-3.414a4 4 0 01.94-1.414z"/></svg>`;
+const clockIcon = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
+const trashIcon = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>`;
+
+// ─── Render: Dashboard ────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const stats     = ownerStats();
+  const recovered = stats.reduce((s, o) => s + o.recovered, 0);
+  const remaining = TOTAL - recovered;
+
+  document.getElementById('dashboard').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="metric-row">
+        <div class="card metric-card">
+          <div class="metric-label">Season Cost</div>
+          <div class="metric-value">$${TOTAL.toLocaleString()}</div>
+          <div class="metric-sub">Rent + utils + fees</div>
+        </div>
+        <div class="card metric-card">
+          <div class="metric-label">Recovered</div>
+          <div class="metric-value green">$${fmt(recovered)}</div>
+          <div class="metric-sub">${pct(recovered, TOTAL)}% of season</div>
+        </div>
+        <div class="card metric-card">
+          <div class="metric-label">Still Owed</div>
+          <div class="metric-value ${remaining > 0 ? 'red' : 'green'}">$${fmt(remaining)}</div>
+          <div class="metric-sub">Across all owners</div>
+        </div>
+      </div>
+
+      <div class="owner-row">
+        ${stats.map(o => {
+          const p = pct(o.recovered, o.fronted);
+          return `
+            <div class="card owner-card">
+              <div class="owner-bar-track">
+                <div class="owner-bar-fill" style="width:${p}%;background:${o.color}"></div>
+              </div>
+              <div class="owner-header">
+                <div class="owner-name-row">
+                  <span class="dot" style="background:${o.color}"></span>
+                  <span class="owner-name">${o.name}</span>
+                </div>
+                <span class="owner-pct">${p}% back</span>
+              </div>
+              <dl class="owner-dl">
+                <div class="dl-row"><dt>Fronted</dt><dd>$${fmt(o.fronted)}</dd></div>
+                <div class="dl-row"><dt>Recovered</dt><dd class="green">+$${fmt(o.recovered)}</dd></div>
+                <div class="dl-row dl-total">
+                  <dt>Owed back</dt>
+                  <dd class="${o.remaining > 0 ? 'red' : 'green'}">$${fmt(o.remaining)}</dd>
+                </div>
+              </dl>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:${p}%;background:${o.color}"></div>
+              </div>
+              <div class="owner-slots">${o.paidGuests} / ${o.totalGuests} guest slots paid</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ─── Render: Grid ─────────────────────────────────────────────────────────────
+
+function slotHTML(slot, weekId, roomId, slotIdx) {
+  if (slot.isOwner) {
+    return `
+      <div class="slot slot-empty"
+           data-week="${weekId}" data-room="${roomId}" data-slot="${slotIdx}"
+           data-action="open-modal" data-dropzone="true">
+        <svg class="plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        <span>Add guest</span>
+      </div>`;
+  }
+
+  const color       = guestColor(slot.name);
+  const borderColor = slot.paid ? '#34d399' : '#fbbf24';
+  const paidClass   = slot.paid ? 'slot-paid' : 'slot-unpaid';
+  const statusClass = slot.paid ? 'status-paid' : 'status-unpaid';
+  const btnClass    = slot.paid ? 'btn-paid' : 'btn-unpaid';
+
+  return `
+    <div class="slot slot-guest ${paidClass}"
+         style="border-left-color:${borderColor}"
+         draggable="true"
+         data-week="${weekId}" data-room="${roomId}" data-slot="${slotIdx}"
+         data-dropzone="true">
+      <span class="dot" style="background:${color}"></span>
+      <div class="slot-info">
+        <div class="slot-name">${esc(slot.name)}</div>
+        <div class="slot-status ${statusClass}">${slot.paid ? 'Paid' : 'Unpaid'} · $828</div>
+      </div>
+      <div class="slot-actions">
+        <button class="slot-btn ${btnClass}"
+                data-action="toggle-paid"
+                data-week="${weekId}" data-room="${roomId}" data-slot="${slotIdx}"
+                title="${slot.paid ? 'Mark unpaid' : 'Mark paid'}">
+          ${slot.paid ? checkIcon() : minusIcon()}
+        </button>
+        <button class="slot-btn btn-edit"
+                data-action="open-modal"
+                data-week="${weekId}" data-room="${roomId}" data-slot="${slotIdx}"
+                title="Edit">
+          ${editIcon()}
+        </button>
+      </div>
+    </div>`;
+}
+
+let dragSrc = null;
+
+function renderGrid() {
+  document.getElementById('tab-content').innerHTML = `
+    <div class="card grid-card">
+      <div class="grid-scroll">
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th class="week-col"><span class="col-label">Week</span></th>
+              ${ROOMS.map(room => {
+                const owner = getOwner(room.owner);
+                return `
+                  <th class="room-col">
+                    <div class="room-header">
+                      <span class="dot" style="background:${owner.color}"></span>
+                      <div>
+                        <div class="room-label">${room.label}</div>
+                        <div class="room-owner">${room.owner}</div>
+                      </div>
+                    </div>
+                  </th>`;
+              }).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${WEEKS.map((week, wi) => `
+              <tr class="${wi % 2 === 1 ? 'row-alt' : ''}">
+                <td class="week-cell">
+                  <div class="week-label">${week.label}</div>
+                  <div class="week-dates">${week.dates}</div>
+                </td>
+                ${ROOMS.map(room => `
+                  <td class="slot-cell">
+                    ${state.grid[week.id][room.id].map((slot, idx) =>
+                      slotHTML(slot, week.id, room.id, idx)
+                    ).join('')}
+                  </td>`).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="grid-legend">
+        <div class="legend-item"><span class="legend-line amber"></span>Unpaid guest</div>
+        <div class="legend-item"><span class="legend-line green"></span>Paid guest</div>
+        <div class="legend-item legend-dashed">+ Available slot</div>
+        <div class="legend-item muted">Drag to rearrange</div>
+      </div>
+    </div>
+  `;
+
+  const content = document.getElementById('tab-content');
+
+  // Click delegation
+  content.addEventListener('click', e => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const { action } = el.dataset;
+    const weekId = +el.dataset.week, roomId = +el.dataset.room, slotIdx = +el.dataset.slot;
+    if (action === 'toggle-paid') { e.stopPropagation(); togglePaid(weekId, roomId, slotIdx); }
+    else if (action === 'open-modal') openModal(weekId, roomId, slotIdx);
+  });
+
+  // Drag & drop delegation
+  content.addEventListener('dragstart', e => {
+    const el = e.target.closest('.slot-guest');
+    if (!el) return;
+    dragSrc = { weekId: +el.dataset.week, roomId: +el.dataset.room, slotIdx: +el.dataset.slot };
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  content.addEventListener('dragover', e => {
+    const zone = e.target.closest('[data-dropzone]');
+    if (!zone || !dragSrc) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    zone.classList.add('drag-over');
+  });
+
+  content.addEventListener('dragleave', e => {
+    const zone = e.target.closest('[data-dropzone]');
+    if (zone) zone.classList.remove('drag-over');
+  });
+
+  content.addEventListener('drop', e => {
+    const zone = e.target.closest('[data-dropzone]');
+    if (!zone || !dragSrc) return;
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    moveGuest(dragSrc, { weekId: +zone.dataset.week, roomId: +zone.dataset.room, slotIdx: +zone.dataset.slot });
+    dragSrc = null;
+  });
+
+  content.addEventListener('dragend', () => {
+    dragSrc = null;
+    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+}
+
+// ─── Render: Guest Roster ─────────────────────────────────────────────────────
+
+function renderGuestRoster() {
+  const roster = guestRoster();
+  const el     = document.getElementById('tab-content');
+
+  if (roster.length === 0) {
+    el.innerHTML = `<div class="card empty-state"><p class="empty-text">No guests yet — add them in the Grid.</p></div>`;
+    return;
+  }
+
+  const totalOutstanding = roster.reduce((s, e) => s + (e.totalOwed - e.totalPaid), 0);
+
+  el.innerHTML = `
+    <div class="space-y">
+      <div class="card">
+        ${roster.map((entry, i) => {
+          const paidCount    = entry.slots.filter(s => s.paid).length;
+          const pendingCount = entry.slots.length - paidCount;
+          return `
+            ${i > 0 ? '<div class="divider"></div>' : ''}
+            <div class="roster-row">
+              <div class="roster-left">
+                <div class="roster-name-row">
+                  <span class="dot dot-lg" style="background:${entry.color}"></span>
+                  <span class="roster-name">${esc(entry.name)}</span>
+                </div>
+                <div class="roster-tags">
+                  ${entry.slots.map(s => `<span class="week-tag">${s.week}</span>`).join('')}
+                </div>
+                <div class="roster-details">
+                  ${entry.slots.map(s => `
+                    <div class="roster-detail">
+                      ${s.room} · ${s.owner}
+                      <span class="${s.paid ? 'detail-paid' : 'detail-pending'}"> · ${s.paid ? 'paid' : 'pending'}</span>
+                    </div>`).join('')}
+                </div>
+              </div>
+              <div class="roster-right">
+                <div class="roster-total">$${fmt(entry.totalOwed)}</div>
+                <div class="roster-breakdown">
+                  ${paidCount    > 0 ? `<span class="green">${paidCount} paid</span>` : ''}
+                  ${paidCount    > 0 && pendingCount > 0 ? ' · ' : ''}
+                  ${pendingCount > 0 ? `<span class="amber">${pendingCount} pending</span>` : ''}
+                </div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <div class="card summary-row">
+        <span>Total outstanding across all guests</span>
+        <span class="summary-amount amber">$${fmt(totalOutstanding)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Render: Interest Queue ───────────────────────────────────────────────────
+
+function renderInterestQueue() {
+  const totalPotential = INTEREST_QUEUE.reduce((s, p) => s + p.spots * p.weeks.length * COST, 0);
+
+  document.getElementById('tab-content').innerHTML = `
+    <div class="space-y">
+      <div class="card">
+        ${INTEREST_QUEUE.map((person, i) => {
+          const total = person.spots * person.weeks.length * COST;
+          return `
+            ${i > 0 ? '<div class="divider"></div>' : ''}
+            <div class="queue-row">
+              <div class="avatar" style="background:${INITIALS_COLORS[i % INITIALS_COLORS.length]}">${person.initials}</div>
+              <div class="queue-info">
+                <div class="queue-name-row">
+                  <span class="queue-name">${esc(person.name)}</span>
+                  <span class="queue-note">${person.note}</span>
+                </div>
+                <div class="queue-tags">
+                  ${person.weeks.map(w => `<span class="week-chip ${WEEK_TAG_CLASS[w] || ''}">${w}</span>`).join('')}
+                </div>
+              </div>
+              <div class="queue-cost">
+                <div class="cost-amount">$${fmt(total)}</div>
+                <div class="cost-detail">${person.spots} spot${person.spots > 1 ? 's' : ''} × ${person.weeks.length} wk${person.weeks.length > 1 ? 's' : ''}</div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <div class="card summary-row">
+        <span>Total potential recovery from queue</span>
+        <span class="summary-amount">$${fmt(totalPotential)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Render: Reimbursements ───────────────────────────────────────────────────
+
+function renderReimbursements() {
+  const list = reimbursements();
+  const el   = document.getElementById('tab-content');
+
+  if (list.length === 0) {
+    el.innerHTML = `
+      <div class="card empty-state">
+        <p class="empty-text">No guests assigned yet</p>
+        <p class="empty-sub">Add guests in the Grid to track payments here</p>
+      </div>`;
+    return;
+  }
+
+  const collected   = list.filter(r =>  r.paid).reduce((s, r) => s + r.amount, 0);
+  const outstanding = list.filter(r => !r.paid).reduce((s, r) => s + r.amount, 0);
+  const byOwner     = OWNERS
+    .map(o => ({ ...o, rows: list.filter(r => r.owner === o.name) }))
+    .filter(o => o.rows.length > 0);
+
+  el.innerHTML = `
+    <div class="space-y">
+      <div class="card reimb-summary">
+        <div class="reimb-metric">
+          <div class="metric-label">Entries</div>
+          <div class="metric-value">${list.length}</div>
+        </div>
+        <div class="reimb-divider"></div>
+        <div class="reimb-metric">
+          <div class="metric-label">Collected</div>
+          <div class="metric-value green">$${fmt(collected)}</div>
+        </div>
+        <div class="reimb-divider"></div>
+        <div class="reimb-metric">
+          <div class="metric-label">Outstanding</div>
+          <div class="metric-value amber">$${fmt(outstanding)}</div>
+        </div>
+      </div>
+
+      ${byOwner.map(owner => {
+        const ownerCollected = owner.rows.filter(r => r.paid).reduce((s, r) => s + r.amount, 0);
+        const ownerOwed      = owner.rows.filter(r => !r.paid).reduce((s, r) => s + r.amount, 0);
+        return `
+          <div class="card table-card">
+            <div class="table-header">
+              <span class="dot" style="background:${owner.color}"></span>
+              <span class="table-owner-name">${owner.name}</span>
+              <div class="table-header-amounts">
+                <span class="green">$${fmt(ownerCollected)} in</span>
+                <span class="amber">$${fmt(ownerOwed)} pending</span>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="reimb-table">
+                <thead>
+                  <tr>
+                    <th>Guest</th><th>Week</th>
+                    <th class="hide-sm">Room</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${owner.rows.map(r => `
+                    <tr>
+                      <td class="fw-medium">${esc(r.guest)}</td>
+                      <td>
+                        <div class="fw-medium">${r.week}</div>
+                        <div class="text-muted text-sm">${r.dates}</div>
+                      </td>
+                      <td class="hide-sm text-muted text-sm">${r.room}</td>
+                      <td class="text-right fw-medium">$${r.amount.toFixed(2)}</td>
+                      <td class="text-right">
+                        ${r.paid
+                          ? `<span class="status-badge status-paid-badge">${checkIcon()} Paid</span>`
+                          : `<span class="status-badge status-pending-badge">${clockIcon()} Pending</span>`}
+                      </td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      }).join('')}
+
+      <div class="card grand-total">
+        <div class="total-row">
+          <span>Total due from guests</span>
+          <span class="fw-medium">$${fmt(list.reduce((s, r) => s + r.amount, 0))}</span>
+        </div>
+        <div class="total-row">
+          <span>Collected</span>
+          <span class="fw-medium green">+$${fmt(collected)}</span>
+        </div>
+        <div class="total-row total-row-final">
+          <span class="fw-medium">Still outstanding</span>
+          <span class="total-final-amount amber">$${fmt(outstanding)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+function openModal(weekId, roomId, slotIdx) {
+  state.modal = { weekId, roomId, slotIdx };
+  renderModal();
+}
+
+function closeModal() {
+  state.modal = null;
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+function renderModal() {
+  const { weekId, roomId, slotIdx } = state.modal;
+  const slot  = state.grid[weekId][roomId][slotIdx];
+  const room  = getRoom(roomId);
+  const week  = WEEKS.find(w => w.id === weekId);
+  const known = Object.keys(state.guestRegistry);
+
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('hidden');
+
+  let isPaid = slot.paid;
+
+  document.getElementById('modal-box').innerHTML = `
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-title">Assign Guest</h2>
+        <p class="modal-sub">${week.label} · ${week.dates} · ${room.label}</p>
+      </div>
+      <button class="modal-close" id="btn-modal-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-meta">
+        <span class="meta-label">Room owner</span>
+        <span class="meta-value">${room.owner}</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Guest Name</label>
+        <div class="input-wrap">
+          <input type="text" id="modal-input" class="form-input"
+                 value="${esc(slot.isOwner ? '' : slot.name)}"
+                 placeholder="Leave blank to keep as ${room.owner}"
+                 autocomplete="off">
+          <ul class="autocomplete-list hidden" id="autocomplete"></ul>
+        </div>
+      </div>
+
+      <div class="payment-group ${slot.isOwner || !slot.name ? 'hidden' : ''}" id="payment-group">
+        <label class="form-label">Payment</label>
+        <div class="payment-btns">
+          <button class="payment-btn ${!isPaid ? 'payment-btn-unpaid-active' : ''}" id="btn-unpaid">Unpaid</button>
+          <button class="payment-btn ${isPaid  ? 'payment-btn-paid-active'   : ''}" id="btn-paid">Paid · $${COST}</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        ${!slot.isOwner ? `<button class="btn-clear" id="btn-clear">${trashIcon()} Clear</button>` : ''}
+        <button class="btn-cancel" id="btn-cancel">Cancel</button>
+        <button class="btn-save"   id="btn-save">Save</button>
+      </div>
+    </div>
+  `;
+
+  const input        = document.getElementById('modal-input');
+  const paymentGroup = document.getElementById('payment-group');
+  const autocomplete = document.getElementById('autocomplete');
+  const btnUnpaid    = document.getElementById('btn-unpaid');
+  const btnPaid      = document.getElementById('btn-paid');
+
+  function updateVisibility() {
+    paymentGroup.classList.toggle('hidden', !input.value.trim());
+  }
+
+  function updateAutocomplete() {
+    const val = input.value.toLowerCase();
+    const matches = known.filter(n => n.toLowerCase().includes(val) && n.toLowerCase() !== val).slice(0, 6);
+    if (!matches.length || !val) { autocomplete.classList.add('hidden'); return; }
+    autocomplete.innerHTML = matches.map(n => `
+      <li class="autocomplete-item" data-name="${esc(n)}">
+        <span class="dot" style="background:${guestColor(n)}"></span>${esc(n)}
+      </li>`).join('');
+    autocomplete.classList.remove('hidden');
+  }
+
+  input.addEventListener('input',  () => { updateVisibility(); updateAutocomplete(); });
+  input.addEventListener('focus',  updateAutocomplete);
+  input.addEventListener('blur',   () => setTimeout(() => autocomplete.classList.add('hidden'), 150));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') saveSlot(input.value, isPaid); });
+
+  autocomplete.addEventListener('click', e => {
+    const item = e.target.closest('.autocomplete-item');
+    if (!item) return;
+    input.value = item.dataset.name;
+    autocomplete.classList.add('hidden');
+    updateVisibility();
+  });
+
+  btnUnpaid.addEventListener('click', () => {
+    isPaid = false;
+    btnUnpaid.className = 'payment-btn payment-btn-unpaid-active';
+    btnPaid.className   = 'payment-btn';
+  });
+
+  btnPaid.addEventListener('click', () => {
+    isPaid = true;
+    btnPaid.className   = 'payment-btn payment-btn-paid-active';
+    btnUnpaid.className = 'payment-btn';
+  });
+
+  document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+  document.getElementById('btn-cancel').addEventListener('click', closeModal);
+  document.getElementById('btn-save').addEventListener('click', () => saveSlot(input.value, isPaid));
+
+  const clearBtn = document.getElementById('btn-clear');
+  if (clearBtn) clearBtn.addEventListener('click', () => saveSlot('', false));
+
+  overlay.onclick = e => { if (e.target === overlay) closeModal(); };
+
+  input.focus();
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+function renderTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
+  });
+}
+
+function renderTabContent() {
+  switch (state.activeTab) {
+    case 'grid':          return renderGrid();
+    case 'guests':        return renderGuestRoster();
+    case 'queue':         return renderInterestQueue();
+    case 'reimbursement': return renderReimbursements();
+  }
+}
+
+// ─── Main render ──────────────────────────────────────────────────────────────
+
+function render() {
+  renderDashboard();
+  renderTabs();
+  renderTabContent();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.activeTab = btn.dataset.tab;
+    render();
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.modal) closeModal();
+});
+
+// Render owner dots in header
+document.getElementById('header-owners').innerHTML = OWNERS.map(o => `
+  <div class="header-owner">
+    <span class="dot" style="background:${o.color}"></span>
+    <span>${o.name}</span>
+  </div>`).join('');
+
+render();
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #f4f4f5;
+  color: #0f172a;
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.container { max-width: 1152px; margin: 0 auto; padding: 0 20px; }
+
+main.container { padding-top: 24px; padding-bottom: 48px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.site-header { background: #0f172a; color: white; }
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+
+.wave-icon { width: 20px; height: 20px; color: #38bdf8; flex-shrink: 0; }
+
+.site-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+
+.site-sub { font-size: 11px; color: #52525b; margin-top: 2px; }
+
+.header-owners { display: flex; align-items: center; gap: 16px; }
+
+.header-owner { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #71717a; }
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.card {
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── Dots ─────────────────────────────────────────────────────────────────── */
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-lg { width: 10px; height: 10px; }
+
+/* ── Dashboard ────────────────────────────────────────────────────────────── */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.metric-card { padding: 20px; }
+
+.metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a1a1aa;
+  margin-bottom: 8px;
+}
+
+.metric-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.metric-value.green { color: #059669; }
+.metric-value.red   { color: #ef4444; }
+.metric-value.amber { color: #f59e0b; }
+
+.metric-sub { font-size: 11px; color: #a1a1aa; margin-top: 4px; }
+
+.owner-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.owner-card { position: relative; }
+
+.owner-bar-track { height: 4px; background: #f4f4f5; }
+.owner-bar-fill  { height: 4px; transition: width 0.5s ease; }
+
+.owner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+
+.owner-name-row { display: flex; align-items: center; gap: 8px; }
+.owner-name { font-weight: 600; font-size: 15px; }
+.owner-pct  { font-size: 11px; color: #a1a1aa; font-weight: 500; }
+
+.owner-dl { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+
+.dl-row { display: flex; justify-content: space-between; font-size: 13px; }
+.dl-row dt { color: #71717a; }
+.dl-row dd { font-weight: 500; font-variant-numeric: tabular-nums; }
+.dl-row dd.green { color: #059669; }
+.dl-row dd.red   { color: #ef4444; }
+
+.dl-total { padding-top: 8px; border-top: 1px solid #f4f4f5; }
+.dl-total dt { font-weight: 500; color: #3f3f46; }
+.dl-total dd { font-weight: 700; }
+
+.progress-bar { margin: 12px 20px 4px; height: 6px; background: #f4f4f5; border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+
+.owner-slots { padding: 4px 20px 16px; font-size: 11px; color: #a1a1aa; }
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid #e4e4e7;
+  gap: 0;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.tab-btn:hover { color: #3f3f46; border-bottom-color: #d4d4d8; }
+.tab-btn.active { color: #0f172a; border-bottom-color: #0f172a; }
+
+/* ── Grid ─────────────────────────────────────────────────────────────────── */
+.grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.grid-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+
+.grid-table thead tr { background: #fafafa; border-bottom: 1px solid #e4e4e7; }
+
+.grid-table th { padding: 12px; text-align: left; font-weight: 500; }
+
+.week-col { width: 120px; }
+.col-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #a1a1aa; }
+
+.room-col { width: 22%; border-left: 1px solid #e4e4e7; }
+
+.room-header { display: flex; align-items: center; gap: 8px; }
+.room-label  { font-size: 12px; font-weight: 600; color: #1e293b; }
+.room-owner  { font-size: 10px; color: #a1a1aa; font-weight: 500; }
+
+.grid-table tbody tr { border-bottom: 1px solid #f4f4f5; }
+.grid-table tbody tr:last-child { border-bottom: none; }
+.grid-table tbody tr.row-alt { background: rgba(244,244,245,0.5); }
+
+.week-cell { padding: 12px; width: 120px; vertical-align: top; }
+.week-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+.week-dates { font-size: 10px; color: #a1a1aa; font-weight: 500; margin-top: 2px; }
+
+.slot-cell { padding: 10px 12px; vertical-align: top; border-left: 1px solid #f4f4f5; display: table-cell; }
+
+.slot-cell > * + * { margin-top: 6px; }
+
+/* ── Slot cards ───────────────────────────────────────────────────────────── */
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d4d4d8;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  min-height: 46px;
+}
+
+.slot-empty {
+  border-style: dashed;
+  background: #fafafa;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.slot-empty:hover { background: #f4f4f5; border-color: #a1a1aa; color: #71717a; }
+
+.plus-icon { width: 12px; height: 12px; flex-shrink: 0; }
+
+.slot-guest {
+  border-left-width: 2px;
+  cursor: grab;
+}
+.slot-guest:active { cursor: grabbing; }
+
+.slot-unpaid { border-color: #e4e4e7; }
+.slot-paid   { border-color: #6ee7b7; }
+
+.slot-info { flex: 1; min-width: 0; }
+.slot-name { font-size: 11px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-status { font-size: 10px; font-weight: 500; margin-top: 2px; }
+.status-paid   { color: #10b981; }
+.status-unpaid { color: #f59e0b; }
+
+.slot-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.slot-btn {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.btn-paid   { background: #d1fae5; color: #059669; }
+.btn-paid:hover { background: #a7f3d0; }
+.btn-unpaid { background: #f4f4f5; color: #a1a1aa; }
+.btn-unpaid:hover { background: #d1fae5; color: #059669; }
+.btn-edit   { background: #f4f4f5; color: #a1a1aa; }
+.btn-edit:hover { background: #e4e4e7; }
+
+/* Drag states */
+.slot.dragging { opacity: 0.4; }
+.slot.drag-over { outline: 2px solid #64748b; outline-offset: 2px; }
+
+/* Grid legend */
+.grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid #f4f4f5;
+  background: #fafafa;
+  font-size: 11px;
+  color: #71717a;
+  align-items: center;
+}
+
+.legend-item { display: flex; align-items: center; gap: 6px; }
+
+.legend-line { display: inline-block; width: 12px; height: 2px; border-radius: 99px; }
+.legend-line.amber { background: #fbbf24; }
+.legend-line.green { background: #34d399; }
+
+.legend-dashed {
+  border: 1px dashed #d4d4d8;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #a1a1aa;
+}
+
+.legend-item.muted { color: #a1a1aa; }
+
+/* ── Guest Roster ─────────────────────────────────────────────────────────── */
+.roster-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.roster-left { flex: 1; min-width: 0; }
+
+.roster-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.roster-name { font-weight: 600; font-size: 14px; }
+
+.roster-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+
+.week-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.roster-details { display: flex; flex-direction: column; gap: 2px; }
+.roster-detail { font-size: 11px; color: #a1a1aa; }
+.detail-paid    { color: #10b981; }
+.detail-pending { color: #f59e0b; }
+
+.roster-right { text-align: right; flex-shrink: 0; }
+.roster-total { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.roster-breakdown { font-size: 11px; color: #a1a1aa; margin-top: 2px; }
+
+/* ── Interest Queue ───────────────────────────────────────────────────────── */
+.queue-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  transition: background 0.1s;
+}
+.queue-row:hover { background: #fafafa; }
+
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.queue-info { flex: 1; min-width: 0; }
+.queue-name-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.queue-name { font-weight: 600; font-size: 13px; }
+.queue-note { font-size: 11px; color: #a1a1aa; }
+.queue-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.week-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.tag-pink   { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+.tag-amber  { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+.tag-sky    { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+.tag-violet { background: #f5f3ff; color: #7c3aed; border-color: #ddd6fe; }
+.tag-teal   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+
+.queue-cost { text-align: right; flex-shrink: 0; }
+.cost-amount { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cost-detail { font-size: 10px; color: #a1a1aa; margin-top: 2px; }
+
+/* ── Reimbursements ───────────────────────────────────────────────────────── */
+.reimb-summary {
+  display: flex;
+  align-items: stretch;
+  padding: 20px;
+  gap: 0;
+}
+
+.reimb-metric { flex: 1; }
+.reimb-divider { width: 1px; background: #f4f4f5; margin: 0 24px; }
+
+.table-card .table-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #fafafa;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.table-owner-name { font-weight: 600; font-size: 13px; }
+.table-header-amounts { margin-left: auto; display: flex; gap: 16px; font-size: 11px; }
+
+.table-scroll { overflow-x: auto; }
+
+.reimb-table { width: 100%; border-collapse: collapse; min-width: 460px; }
+.reimb-table thead tr { border-bottom: 1px solid #f4f4f5; }
+.reimb-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a1a1aa;
+}
+.reimb-table th:last-child, .reimb-table th.text-right { text-align: right; }
+.reimb-table tbody tr { border-bottom: 1px solid #fafafa; transition: background 0.1s; }
+.reimb-table tbody tr:hover { background: #fafafa; }
+.reimb-table tbody tr:last-child { border-bottom: none; }
+.reimb-table td { padding: 12px 16px; font-size: 13px; }
+.reimb-table td.text-right { text-align: right; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-paid-badge    { color: #059669; }
+.status-pending-badge { color: #f59e0b; }
+
+.grand-total { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+.total-row { display: flex; justify-content: space-between; font-size: 13px; color: #71717a; }
+.total-row-final {
+  padding-top: 10px;
+  border-top: 1px solid #f4f4f5;
+  color: #0f172a;
+}
+.total-final-amount { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* ── Summary row (shared) ─────────────────────────────────────────────────── */
+.summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: #71717a;
+}
+.summary-amount { font-weight: 700; font-size: 14px; color: #0f172a; font-variant-numeric: tabular-nums; }
+.summary-amount.amber { color: #f59e0b; }
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: #f4f4f5; }
+
+/* ── Spacing helpers ──────────────────────────────────────────────────────── */
+.space-y { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-state { padding: 64px 20px; text-align: center; }
+.empty-text  { font-size: 13px; font-weight: 500; color: #a1a1aa; }
+.empty-sub   { font-size: 11px; color: #d4d4d8; margin-top: 4px; }
+
+/* ── Text utilities ───────────────────────────────────────────────────────── */
+.green    { color: #059669; }
+.amber    { color: #f59e0b; }
+.red      { color: #ef4444; }
+.fw-medium{ font-weight: 500; }
+.text-right { text-align: right; }
+.text-muted { color: #a1a1aa; }
+.text-sm    { font-size: 11px; }
+
+@media (max-width: 640px) { .hide-sm { display: none; } }
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  padding: 0;
+}
+
+@media (min-width: 480px) {
+  .modal-overlay { align-items: center; padding: 16px; }
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal-box {
+  background: white;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+@media (min-width: 480px) {
+  .modal-box { border-radius: 16px; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.modal-title { font-weight: 600; font-size: 15px; }
+.modal-sub   { font-size: 11px; color: #a1a1aa; margin-top: 2px; }
+
+.modal-close {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #a1a1aa;
+  transition: background 0.1s;
+}
+.modal-close:hover { background: #f4f4f5; }
+
+.modal-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 16px; }
+
+.modal-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.meta-label { color: #71717a; }
+.meta-value { font-weight: 500; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #52525b;
+}
+
+.input-wrap { position: relative; }
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input:focus { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,0.1); }
+.form-input::placeholder { color: #d4d4d8; }
+
+.autocomplete-list {
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(100% + 4px);
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 10;
+  overflow: hidden;
+  list-style: none;
+}
+.autocomplete-list.hidden { display: none; }
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #1e293b;
+  transition: background 0.1s;
+}
+.autocomplete-item:hover { background: #fafafa; }
+
+.payment-group { display: flex; flex-direction: column; gap: 6px; }
+.payment-group.hidden { display: none; }
+
+.payment-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.payment-btn {
+  padding: 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.payment-btn:hover { border-color: #d4d4d8; }
+.payment-btn-unpaid-active { background: #fffbeb; border-color: #fcd34d; color: #b45309; }
+.payment-btn-paid-active   { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+
+.modal-actions { display: flex; gap: 8px; padding-top: 4px; }
+
+.btn-clear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: none;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-clear:hover { color: #ef4444; background: #fef2f2; border-color: #fecaca; }
+
+.btn-cancel {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #52525b;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.btn-cancel:hover { background: #fafafa; }
+
+.btn-save {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: white;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.btn-save:hover { background: #1e293b; }
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 32px 20px;
+  font-size: 11px;
+  color: #a1a1aa;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .metric-row  { grid-template-columns: 1fr; }
+  .owner-row   { grid-template-columns: 1fr; }
+  .header-owners { display: none; }
+  .reimb-summary { flex-direction: column; }
+  .reimb-divider { width: auto; height: 1px; margin: 8px 0; }
+}
