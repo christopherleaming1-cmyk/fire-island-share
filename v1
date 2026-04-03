@@ -1,0 +1,1230 @@
+ fire-island-share-manager/
+  ---
+  .gitignore
+  node_modules
+  dist
+  .DS_Store
+
+  ---
+  package.json
+  {
+    "name": "fire-island-share-manager",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "preview": "vite preview"
+    },
+    "dependencies": {
+      "react": "^18.2.0",
+      "react-dom": "^18.2.0",
+      "lucide-react": "^0.395.0"
+    },
+    "devDependencies": {
+      "@vitejs/plugin-react": "^4.3.1",
+      "autoprefixer": "^10.4.19",
+      "postcss": "^8.4.38",
+      "tailwindcss": "^3.4.4",
+      "vite": "^5.3.1"
+    }
+  }
+
+  ---
+  vite.config.js
+  import { defineConfig } from 'vite'
+  import react from '@vitejs/plugin-react'
+
+  export default defineConfig({
+    plugins: [react()],
+  })
+
+  ---
+  tailwind.config.js
+  /** @type {import('tailwindcss').Config} */
+  export default {
+    content: [
+      "./index.html",
+      "./src/**/*.{js,ts,jsx,tsx}",
+    ],
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+    plugins: [],
+  }
+
+  ---
+  postcss.config.js
+  export default {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  }
+
+  ---
+  index.html
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Fire Island Share Manager</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;60
+  0;700;800&display=swap" rel="stylesheet" />
+    </head>
+    <body>
+      <div id="root"></div>
+      <script type="module" src="/src/main.jsx"></script>
+    </body>
+  </html>
+
+  ---
+  src/index.css
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  @layer base {
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+  }
+
+  ---
+  src/main.jsx
+  import React from 'react'
+  import ReactDOM from 'react-dom/client'
+  import App from './App.jsx'
+  import './index.css'
+
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+
+  ---
+  src/data.js
+  export const WEEKS = [
+    { id: 1, label: 'May',    dates: '5/28–6/4'   },
+    { id: 2, label: 'June',   dates: '6/18–6/25'  },
+    { id: 3, label: 'July',   dates: '7/9–7/16'   },
+    { id: 4, label: 'August', dates: '8/13–8/20'  },
+    { id: 5, label: 'Sept',   dates: '9/3–9/10'   },
+  ];
+
+  export const ROOMS = [
+    { id: 1, owner: 'Rhys',    label: 'Room 1' },
+    { id: 2, owner: 'Rhys',    label: 'Room 2' },
+    { id: 3, owner: 'Chris',   label: 'Room 3' },
+    { id: 4, owner: 'Michael', label: 'Room 4' },
+  ];
+
+  export const OWNERS = [
+    {
+      name: 'Rhys',
+      fronted: 16562.50,
+      rooms: [1, 2],
+      dot:   'bg-blue-500',
+      bar:   'bg-blue-500',
+      text:  'text-blue-600',
+      ring:  'ring-blue-500',
+      tint:  'bg-blue-50',
+      border: 'border-l-blue-500',
+    },
+    {
+      name: 'Chris',
+      fronted: 8281.25,
+      rooms: [3],
+      dot:   'bg-violet-500',
+      bar:   'bg-violet-500',
+      text:  'text-violet-600',
+      ring:  'ring-violet-500',
+      tint:  'bg-violet-50',
+      border: 'border-l-violet-500',
+    },
+    {
+      name: 'Michael',
+      fronted: 8281.25,
+      rooms: [4],
+      dot:   'bg-teal-500',
+      bar:   'bg-teal-500',
+      text:  'text-teal-600',
+      ring:  'ring-teal-500',
+      tint:  'bg-teal-50',
+      border: 'border-l-teal-500',
+    },
+  ];
+
+  export const GUEST_COLORS = [
+    { dot: 'bg-rose-400',    text: 'text-rose-600'    },
+    { dot: 'bg-amber-400',   text: 'text-amber-600'   },
+    { dot: 'bg-lime-500',    text: 'text-lime-600'    },
+    { dot: 'bg-cyan-400',    text: 'text-cyan-600'    },
+    { dot: 'bg-fuchsia-400', text: 'text-fuchsia-600' },
+    { dot: 'bg-orange-400',  text: 'text-orange-600'  },
+    { dot: 'bg-indigo-400',  text: 'text-indigo-600'  },
+    { dot: 'bg-pink-400',    text: 'text-pink-600'    },
+    { dot: 'bg-sky-400',     text: 'text-sky-600'     },
+    { dot: 'bg-purple-400',  text: 'text-purple-600'  },
+    { dot: 'bg-teal-400',    text: 'text-teal-600'    },
+    { dot: 'bg-yellow-500',  text: 'text-yellow-600'  },
+  ];
+
+  export const COST_PER_PERSON_WEEK = 828.13;
+  export const TOTAL_SEASON_COST    = 33125;
+
+  export const INTEREST_QUEUE = [
+    { id: 1, name: 'Jamie & Paul',     avatar: 'JP', spots: 2, weeks: ['July',
+  'August'], note: '2 spots · July & August' },
+    { id: 2, name: 'Kouros',           avatar: 'K',  spots: 1, weeks: ['May',
+  'June', 'July'], note: '1 spot · May, June & July' },
+    { id: 3, name: 'Andrew & West',    avatar: 'AW', spots: 2, weeks: ['June'],
+  note: 'Full room · June' },
+    { id: 4, name: 'Christian & Matt', avatar: 'CM', spots: 2, weeks: ['May'],
+  note: 'Full room · May'  },
+  ];
+
+  export const buildInitialGrid = () => {
+    const grid = {};
+    WEEKS.forEach(week => {
+      grid[week.id] = {};
+      ROOMS.forEach(room => {
+        grid[week.id][room.id] = [
+          { name: room.owner, paid: false, isOwner: true },
+          { name: room.owner, paid: false, isOwner: true },
+        ];
+      });
+    });
+    return grid;
+  };
+
+  ---
+  src/App.jsx
+  import { useState, useMemo } from 'react';
+  import { Waves } from 'lucide-react';
+  import Dashboard from './components/Dashboard';
+  import WeekGrid from './components/WeekGrid';
+  import GuestModal from './components/GuestModal';
+  import GuestRoster from './components/GuestRoster';
+  import InterestQueue from './components/InterestQueue';
+  import ReimbursementTable from './components/ReimbursementTable';
+  import { WEEKS, ROOMS, OWNERS, COST_PER_PERSON_WEEK, TOTAL_SEASON_COST,
+  buildInitialGrid } from './data';
+
+  const TABS = [
+    { id: 'grid',          label: 'Grid'           },
+    { id: 'guests',        label: 'Guests'         },
+    { id: 'queue',         label: 'Interest Queue' },
+    { id: 'reimbursement', label: 'Reimbursements' },
+  ];
+
+  export default function App() {
+    const [grid, setGrid]                   = useState(buildInitialGrid);
+    const [modal, setModal]                 = useState(null);
+    const [activeTab, setActiveTab]         = useState('grid');
+    const [guestRegistry, setGuestRegistry] = useState({});
+
+    const openModal = (weekId, roomId, slotIdx) =>
+      setModal({ weekId, roomId, slotIdx, slot: grid[weekId][roomId][slotIdx]
+  });
+
+    const closeModal = () => setModal(null);
+
+    const saveSlot = ({ name, paid }) => {
+      const { weekId, roomId, slotIdx } = modal;
+      const ownerName = ROOMS.find(r => r.id === roomId).owner;
+      const trimmed   = name.trim();
+      const isOwner   = !trimmed;
+
+      if (!isOwner) {
+        setGuestRegistry(prev => {
+          if (prev[trimmed]) return prev;
+          const usedIndices = Object.values(prev).map(v => v.colorIdx);
+          let nextIdx = 0;
+          while (usedIndices.includes(nextIdx)) nextIdx++;
+          return { ...prev, [trimmed]: { colorIdx: nextIdx } };
+        });
+      }
+
+      setGrid(prev => {
+        const slots = [...prev[weekId][roomId]];
+        slots[slotIdx] = { name: isOwner ? ownerName : trimmed, paid: isOwner ?
+  false : paid, isOwner };
+        return { ...prev, [weekId]: { ...prev[weekId], [roomId]: slots } };
+      });
+      closeModal();
+    };
+
+    const moveGuest = (src, dst) => {
+      if (src.weekId === dst.weekId && src.roomId === dst.roomId && src.slotIdx
+  === dst.slotIdx) return;
+      setGrid(prev => {
+        const newGrid = JSON.parse(JSON.stringify(prev));
+        const srcSlot = newGrid[src.weekId][src.roomId][src.slotIdx];
+        const dstSlot = newGrid[dst.weekId][dst.roomId][dst.slotIdx];
+        if (dstSlot.isOwner) {
+          const srcOwnerName = ROOMS.find(r => r.id === src.roomId).owner;
+          newGrid[dst.weekId][dst.roomId][dst.slotIdx] = { ...srcSlot };
+          newGrid[src.weekId][src.roomId][src.slotIdx] = { name: srcOwnerName,
+  paid: false, isOwner: true };
+        } else {
+          newGrid[dst.weekId][dst.roomId][dst.slotIdx] = { ...srcSlot };
+          newGrid[src.weekId][src.roomId][src.slotIdx] = { ...dstSlot };
+        }
+        return newGrid;
+      });
+    };
+
+    const togglePaid = (weekId, roomId, slotIdx) => {
+      setGrid(prev => {
+        const slots = [...prev[weekId][roomId]];
+        if (slots[slotIdx].isOwner) return prev;
+        slots[slotIdx] = { ...slots[slotIdx], paid: !slots[slotIdx].paid };
+        return { ...prev, [weekId]: { ...prev[weekId], [roomId]: slots } };
+      });
+    };
+
+    const ownerStats = OWNERS.map(owner => {
+      const ownerRooms = ROOMS.filter(r => owner.rooms.includes(r.id));
+      let recovered = 0, totalGuests = 0, paidGuests = 0;
+      ownerRooms.forEach(room => {
+        WEEKS.forEach(week => {
+          grid[week.id][room.id].forEach(slot => {
+            if (!slot.isOwner) {
+              totalGuests++;
+              if (slot.paid) { recovered += COST_PER_PERSON_WEEK; paidGuests++;
+  }
+            }
+          });
+        });
+      });
+      return { ...owner, recovered, remaining: owner.fronted - recovered,
+  totalGuests, paidGuests };
+    });
+
+    const totalRecovered = ownerStats.reduce((s, o) => s + o.recovered, 0);
+
+    const reimbursements = [];
+    WEEKS.forEach(week => {
+      ROOMS.forEach(room => {
+        const owner = OWNERS.find(o => o.name === room.owner);
+        grid[week.id][room.id].forEach((slot, slotIdx) => {
+          if (!slot.isOwner) {
+            reimbursements.push({
+              guest: slot.name, week: week.label, dates: week.dates,
+              room: room.label, owner: room.owner, ownerData: owner,
+              amount: COST_PER_PERSON_WEEK, paid: slot.paid,
+              weekId: week.id, roomId: room.id, slotIdx,
+            });
+          }
+        });
+      });
+    });
+
+    const guestRoster = useMemo(() => {
+      const map = {};
+      WEEKS.forEach(week => {
+        ROOMS.forEach(room => {
+          const owner = OWNERS.find(o => o.name === room.owner);
+          grid[week.id][room.id].forEach(slot => {
+            if (!slot.isOwner) {
+              if (!map[slot.name]) {
+                map[slot.name] = { name: slot.name, colorIdx:
+  guestRegistry[slot.name]?.colorIdx ?? 0, slots: [] };
+              }
+              map[slot.name].slots.push({ week: week.label, dates: week.dates,
+  room: room.label, owner: room.owner, ownerData: owner, paid: slot.paid });
+            }
+          });
+        });
+      });
+      return Object.values(map).map(entry => {
+        const totalOwed = entry.slots.length * COST_PER_PERSON_WEEK;
+        const totalPaid = entry.slots.filter(s => s.paid).length *
+  COST_PER_PERSON_WEEK;
+        return { ...entry, totalOwed, totalPaid };
+      });
+    }, [grid, guestRegistry]);
+
+    const knownGuests = Object.keys(guestRegistry);
+
+    return (
+      <div className="min-h-screen bg-zinc-50 font-sans">
+        <header className="bg-slate-900 text-white">
+          <div className="max-w-6xl mx-auto px-5 py-4 flex items-center
+  justify-between">
+            <div className="flex items-center gap-3">
+              <Waves className="w-5 h-5 text-sky-400" strokeWidth={2} />
+              <div>
+                <h1 className="text-base font-semibold tracking-tight">Fire
+  Island Share Manager</h1>
+                <p className="text-zinc-500 text-xs mt-0.5">Summer 2025 · 5
+  weeks · 4 rooms · $828 / person / week</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              {OWNERS.map(o => (
+                <span key={o.name} className="flex items-center gap-1.5 text-xs
+  text-zinc-400">
+                  <span className={`w-2 h-2 rounded-full ${o.dot}`} />
+                  {o.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-6xl mx-auto px-4 sm:px-5 py-6 space-y-6">
+          <Dashboard ownerStats={ownerStats} totalRecovered={totalRecovered} 
+  totalCost={TOTAL_SEASON_COST} />
+
+          <div className="border-b border-zinc-200">
+            <nav className="flex gap-0">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2
+  transition-colors -mb-px ${
+                    activeTab === tab.id
+                      ? 'border-slate-900 text-slate-900'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-700
+  hover:border-zinc-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {activeTab === 'grid'          && <WeekGrid grid={grid} 
+  onSlotClick={openModal} onTogglePaid={togglePaid} 
+  guestRegistry={guestRegistry} onMove={moveGuest} />}
+          {activeTab === 'guests'        && <GuestRoster 
+  guestRoster={guestRoster} />}
+          {activeTab === 'queue'         && <InterestQueue />}
+          {activeTab === 'reimbursement' && <ReimbursementTable 
+  reimbursements={reimbursements} ownerStats={ownerStats} />}
+        </main>
+
+        <footer className="text-center py-8 text-xs text-zinc-400">
+          Rhys · Chris · Michael · Fire Island 2025
+        </footer>
+
+        {modal && (
+          <GuestModal
+            slot={modal.slot}
+            room={ROOMS.find(r => r.id === modal.roomId)}
+            week={WEEKS.find(w => w.id === modal.weekId)}
+            onSave={saveSlot}
+            onClose={closeModal}
+            knownGuests={knownGuests}
+            guestRegistry={guestRegistry}
+          />
+        )}
+      </div>
+    );
+  }
+
+  ---
+  src/components/Dashboard.jsx
+  const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2,
+  maximumFractionDigits: 2 });
+  const pct  = (a, b) => b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
+
+  function MetricCard({ label, value, sub, valueClass = 'text-slate-900' }) {
+    return (
+      <div className="bg-white border border-zinc-200 rounded-xl p-5">
+        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider
+   mb-2">{label}</p>
+        <p className={`text-2xl font-bold tabular-nums 
+  ${valueClass}`}>{value}</p>
+        {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
+      </div>
+    );
+  }
+
+  export default function Dashboard({ ownerStats, totalRecovered, totalCost }) {
+    const totalRemaining = totalCost - totalRecovered;
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <MetricCard label="Season Cost" 
+  value={`$${totalCost.toLocaleString()}`} sub="Rent + utils + fees" />
+          <MetricCard label="Recovered" value={`$${fmt(totalRecovered)}`}
+  valueClass="text-emerald-600" sub={`${pct(totalRecovered, totalCost)}% of 
+  season`} />
+          <MetricCard label="Still Owed" value={`$${fmt(totalRemaining)}`}
+  valueClass={totalRemaining > 0 ? 'text-red-500' : 'text-emerald-600'}
+  sub="Across all owners" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {ownerStats.map(owner => {
+            const progress = pct(owner.recovered, owner.fronted);
+            return (
+              <div key={owner.name} className="bg-white border border-zinc-200
+  rounded-xl overflow-hidden">
+                <div className={`h-1 ${owner.bar}`} style={{ width: 
+  `${progress}%`, transition: 'width 0.5s ease' }} />
+                <div className="h-1 bg-zinc-100 -mt-1" />
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${owner.dot}
+  flex-shrink-0`} />
+                      <span className="font-semibold
+  text-slate-900">{owner.name}</span>
+                    </div>
+                    <span className="text-xs font-medium
+  text-zinc-400">{progress}% back</span>
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-zinc-500">Fronted</dt>
+                      <dd className="font-medium text-slate-900
+  tabular-nums">${fmt(owner.fronted)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-zinc-500">Recovered</dt>
+                      <dd className="font-medium text-emerald-600
+  tabular-nums">+${fmt(owner.recovered)}</dd>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t
+  border-zinc-100">
+                      <dt className="font-medium text-zinc-700">Owed back</dt>
+                      <dd className={`font-bold tabular-nums ${owner.remaining >
+   0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                        ${fmt(owner.remaining)}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="mt-4 h-1.5 bg-zinc-100 rounded-full
+  overflow-hidden">
+                    <div className={`h-full ${owner.bar} rounded-full 
+  transition-all duration-500`} style={{ width: `${progress}%` }} />
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-1.5">{owner.paidGuests}
+   / {owner.totalGuests} guest slots paid</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  ---
+  src/components/WeekGrid.jsx
+  import { useRef, useState } from 'react';
+  import { Plus, Check, Minus } from 'lucide-react';
+  import { WEEKS, ROOMS, OWNERS, GUEST_COLORS } from '../data';
+
+  const OWNER_MAP = Object.fromEntries(OWNERS.map(o => [o.name, o]));
+
+  function Slot({ slot, weekId, roomId, slotIdx, ownerName, onEdit,
+  onTogglePaid, guestRegistry, isDragOver, isDragging, onDragStart, onDragOver,
+  onDragEnd, onDrop }) {
+    const slotKey = `${weekId}-${roomId}-${slotIdx}`;
+    const dropRing = isDragOver ? 'ring-2 ring-slate-400 ring-offset-1' : '';
+
+    if (slot.isOwner) {
+      return (
+        <button
+          onClick={() => onEdit(weekId, roomId, slotIdx)}
+          onDragOver={(e) => onDragOver(e, slotKey)}
+          onDrop={(e) => onDrop(e, weekId, roomId, slotIdx)}
+          className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg
+  bg-zinc-50 border border-dashed border-zinc-300 text-zinc-400
+  hover:border-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all
+  group text-left ${dropRing}`}
+        >
+          <Plus className="w-3 h-3 flex-shrink-0 group-hover:text-zinc-600" />
+          <span className="text-xs font-medium truncate">Add guest</span>
+        </button>
+      );
+    }
+
+    const colorIdx = guestRegistry[slot.name]?.colorIdx ?? 0;
+    const dotClass = GUEST_COLORS[colorIdx % GUEST_COLORS.length].dot;
+
+    return (
+      <div
+        draggable
+        onDragStart={(e) => onDragStart(e, weekId, roomId, slotIdx)}
+        onDragOver={(e) => onDragOver(e, slotKey)}
+        onDrop={(e) => onDrop(e, weekId, roomId, slotIdx)}
+        onDragEnd={onDragEnd}
+        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border
+   text-left transition-all cursor-grab
+          ${slot.paid ? 'bg-white border-emerald-200 border-l-2
+  border-l-emerald-400' : 'bg-white border-zinc-200 border-l-2
+  border-l-amber-400'}
+          ${isDragging ? 'opacity-40 cursor-grabbing' : ''}
+          ${dropRing}`}
+      >
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-slate-800 truncate
+  leading-tight">{slot.name}</p>
+          <p className={`text-[10px] font-medium mt-0.5 ${slot.paid ?
+  'text-emerald-500' : 'text-amber-500'}`}>
+            {slot.paid ? 'Paid' : 'Unpaid'} · $828
+          </p>
+        </div>
+        <div className="flex gap-1 flex-shrink-0">
+          <button
+            onClick={() => onTogglePaid(weekId, roomId, slotIdx)}
+            title={slot.paid ? 'Mark unpaid' : 'Mark paid'}
+            className={`w-5 h-5 rounded flex items-center justify-center
+  transition-all ${slot.paid ? 'bg-emerald-100 text-emerald-600
+  hover:bg-emerald-200' : 'bg-zinc-100 text-zinc-400 hover:bg-emerald-100
+  hover:text-emerald-600'}`}
+          >
+            {slot.paid ? <Check className="w-3 h-3" /> : <Minus className="w-3
+  h-3" />}
+          </button>
+          <button
+            onClick={() => onEdit(weekId, roomId, slotIdx)}
+            className="w-5 h-5 rounded bg-zinc-100 text-zinc-400
+  hover:bg-zinc-200 flex items-center justify-center transition-all"
+          >
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" 
+  viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" 
+  strokeWidth={2.5} d="M15.232 5.232l3.536 3.536M9 11l6.536-6.536a2 2 0 012.828
+  2.828L11.828 13.828a4 4 0 01-1.414.94l-3.414.854.854-3.414a4 4 0 01.94-1.414z"
+   />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  export default function WeekGrid({ grid, onSlotClick, onTogglePaid,
+  guestRegistry, onMove }) {
+    const dragSrc = useRef(null);
+    const [dragOverKey, setDragOverKey] = useState(null);
+    const [draggingKey, setDraggingKey] = useState(null);
+
+    const handleDragStart = (e, weekId, roomId, slotIdx) => {
+      dragSrc.current = { weekId, roomId, slotIdx };
+      setDraggingKey(`${weekId}-${roomId}-${slotIdx}`);
+      e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e, key) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverKey(key);
+    };
+
+    const handleDrop = (e, weekId, roomId, slotIdx) => {
+      e.preventDefault();
+      setDragOverKey(null);
+      if (dragSrc.current) {
+        onMove(dragSrc.current, { weekId, roomId, slotIdx });
+        dragSrc.current = null;
+      }
+      setDraggingKey(null);
+    };
+
+    const handleDragEnd = () => {
+      setDragOverKey(null);
+      setDraggingKey(null);
+      dragSrc.current = null;
+    };
+
+    return (
+      <div className="bg-white border border-zinc-200 rounded-xl
+  overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50">
+                <th className="px-4 py-3 text-left w-32">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase
+   tracking-wider">Week</span>
+                </th>
+                {ROOMS.map(room => {
+                  const owner = OWNER_MAP[room.owner];
+                  return (
+                    <th key={room.id} className="px-3 py-3 text-left border-l
+  border-zinc-200 w-[22%]">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${owner.dot}
+  flex-shrink-0`} />
+                        <div>
+                          <p className="text-xs font-semibold
+  text-slate-700">{room.label}</p>
+                          <p className="text-[10px] text-zinc-400
+  font-medium">{room.owner}</p>
+                        </div>
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {WEEKS.map((week, wi) => (
+                <tr key={week.id} className={`border-b border-zinc-100 
+  last:border-b-0 ${wi % 2 === 1 ? 'bg-zinc-50/50' : ''}`}>
+                  <td className="px-4 py-3 w-32">
+                    <p className="text-sm font-semibold
+  text-slate-800">{week.label}</p>
+                    <p className="text-[10px] text-zinc-400 font-medium
+  mt-0.5">{week.dates}</p>
+                  </td>
+                  {ROOMS.map(room => (
+                    <td key={room.id} className="px-3 py-3 align-top border-l
+  border-zinc-100 w-[22%]">
+                      <div className="space-y-1.5">
+                        {grid[week.id][room.id].map((slot, idx) => {
+                          const key = `${week.id}-${room.id}-${idx}`;
+                          return (
+                            <Slot
+                              key={idx}
+                              slot={slot}
+                              weekId={week.id}
+                              roomId={room.id}
+                              slotIdx={idx}
+                              ownerName={room.owner}
+                              onEdit={onSlotClick}
+                              onTogglePaid={onTogglePaid}
+                              guestRegistry={guestRegistry}
+                              isDragOver={dragOverKey === key}
+                              isDragging={draggingKey === key}
+                              onDragStart={handleDragStart}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              onDragEnd={handleDragEnd}
+                            />
+                          );
+                        })}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2.5 border-t border-zinc-100 bg-zinc-50 flex
+  flex-wrap items-center gap-x-5 gap-y-1">
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className="w-3 h-0.5 bg-amber-400 rounded-full" />
+            Unpaid guest
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <span className="w-3 h-0.5 bg-emerald-400 rounded-full" />
+            Paid guest
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-zinc-400
+  border-dashed border border-zinc-300 rounded px-1.5 py-0.5">
+            <Plus className="w-2.5 h-2.5" /> Available slot
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+            Drag guest slots to rearrange
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ---
+  src/components/GuestModal.jsx
+  import { useState, useEffect, useRef } from 'react';
+  import { X, Trash2 } from 'lucide-react';
+  import { COST_PER_PERSON_WEEK, GUEST_COLORS } from '../data';
+
+  export default function GuestModal({ slot, room, week, onSave, onClose,
+  knownGuests = [], guestRegistry = {} }) {
+    const [guestName, setGuestName]       = useState(slot.isOwner ? '' :
+  slot.name);
+    const [paid, setPaid]                 = useState(slot.paid);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const inputRef                        = useRef(null);
+
+    useEffect(() => {
+      const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+      document.addEventListener('keydown', onKey);
+      inputRef.current?.focus();
+      return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const isGuest = !!guestName.trim();
+    const handleSave  = () => onSave({ name: guestName, paid: isGuest ? paid :
+  false });
+    const handleClear = () => onSave({ name: '', paid: false });
+
+    const suggestions = knownGuests
+      .filter(name => name.toLowerCase().includes(guestName.toLowerCase()) &&
+  name.toLowerCase() !== guestName.toLowerCase())
+      .slice(0, 6);
+
+    const selectSuggestion = (name) => {
+      setGuestName(name);
+      setShowDropdown(false);
+    };
+
+    return (
+      <div
+        className="fixed inset-0 bg-black/60 flex items-end sm:items-center
+  justify-center z-50 p-0 sm:p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl
+   overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4
+  border-b border-zinc-100">
+            <div>
+              <h2 className="font-semibold text-slate-900">Assign Guest</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {week.label} · {week.dates} · {room.label}
+              </p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center
+  justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="px-5 py-4 space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-500">Room owner</span>
+              <span className="font-medium text-slate-900">{room.owner}</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-600
+  uppercase tracking-wider mb-1.5">
+                Guest Name
+              </label>
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={guestName}
+                  onChange={e => { setGuestName(e.target.value);
+  setShowDropdown(true); }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setShowDropdown(false)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                  placeholder={`Leave blank to keep as ${room.owner}`}
+                  className="w-full px-3 py-2.5 border border-zinc-200
+  rounded-lg text-sm text-slate-900 placeholder:text-zinc-300 focus:outline-none
+   focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                />
+                {showDropdown && suggestions.length > 0 && (
+                  <ul className="absolute left-0 right-0 top-full mt-1 bg-white
+  border border-zinc-200 rounded-lg shadow-md z-50 overflow-hidden">
+                    {suggestions.map(name => {
+                      const colorIdx = guestRegistry[name]?.colorIdx ?? 0;
+                      const dotClass = GUEST_COLORS[colorIdx %
+  GUEST_COLORS.length].dot;
+                      return (
+                        <li key={name}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault();
+  selectSuggestion(name); }}
+                            className="w-full flex items-center gap-2.5 px-3
+  py-2.5 text-sm text-slate-800 hover:bg-zinc-50 text-left transition-colors"
+                          >
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0
+   ${dotClass}`} />
+                            {name}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className={`transition-all duration-200 overflow-hidden 
+  ${isGuest ? 'max-h-24' : 'max-h-0'}`}>
+              <label className="block text-xs font-semibold text-zinc-600
+  uppercase tracking-wider mb-1.5">
+                Payment
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setPaid(false)}
+                  className={`py-2.5 rounded-lg text-sm font-medium border
+  transition-all ${!paid ? 'bg-amber-50 border-amber-300 text-amber-700' :
+  'border-zinc-200 text-zinc-400 hover:border-zinc-300'}`}
+                >
+                  Unpaid
+                </button>
+                <button
+                  onClick={() => setPaid(true)}
+                  className={`py-2.5 rounded-lg text-sm font-medium border
+  transition-all ${paid ? 'bg-emerald-50 border-emerald-300 text-emerald-700' :
+  'border-zinc-200 text-zinc-400 hover:border-zinc-300'}`}
+                >
+                  Paid · ${COST_PER_PERSON_WEEK}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              {!slot.isOwner && (
+                <button
+                  onClick={handleClear}
+                  className="px-3 py-2.5 rounded-lg text-xs font-medium
+  text-zinc-400 hover:text-red-500 hover:bg-red-50 border border-zinc-200
+  transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              )}
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-lg
+  text-sm font-medium border border-zinc-200 text-zinc-600 hover:bg-zinc-50
+  transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleSave} className="flex-1 py-2.5 rounded-lg
+  text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800
+  transition-colors">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ---
+  src/components/GuestRoster.jsx
+  import { GUEST_COLORS, COST_PER_PERSON_WEEK } from '../data';
+
+  const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2,
+  maximumFractionDigits: 2 });
+
+  export default function GuestRoster({ guestRoster }) {
+    if (!guestRoster || guestRoster.length === 0) {
+      return (
+        <div className="bg-white border border-zinc-200 rounded-xl py-16
+  text-center">
+          <p className="text-sm font-medium text-zinc-400">No guests yet — add
+  them in the Grid.</p>
+        </div>
+      );
+    }
+
+    const totalOutstanding = guestRoster.reduce((sum, entry) => sum +
+  (entry.totalOwed - entry.totalPaid), 0);
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white border border-zinc-200 rounded-xl
+  overflow-hidden divide-y divide-zinc-100">
+          {guestRoster.map(entry => {
+            const color = GUEST_COLORS[entry.colorIdx % GUEST_COLORS.length];
+            const pending = entry.totalOwed - entry.totalPaid;
+            const paidCount = entry.slots.filter(s => s.paid).length;
+            const pendingCount = entry.slots.length - paidCount;
+
+            return (
+              <div key={entry.name} className="px-5 py-4 flex items-start
+  gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 
+  ${color.dot}`} />
+                    <span className="font-semibold
+  text-slate-900">{entry.name}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {entry.slots.map((slot, i) => (
+                      <span key={i} className="inline-flex items-center gap-1
+  px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 text-zinc-600">
+                        {slot.week}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="space-y-0.5">
+                    {entry.slots.map((slot, i) => (
+                      <p key={i} className="text-xs text-zinc-400">
+                        {slot.room} · {slot.owner}
+                        {slot.paid
+                          ? <span className="text-emerald-500 ml-1">·
+  paid</span>
+                          : <span className="text-amber-500 ml-1">·
+  pending</span>
+                        }
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-slate-900
+  tabular-nums">${fmt(entry.totalOwed)}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {paidCount > 0 && <span 
+  className="text-emerald-500">{paidCount} paid</span>}
+                    {paidCount > 0 && pendingCount > 0 && <span 
+  className="text-zinc-300"> · </span>}
+                    {pendingCount > 0 && <span 
+  className="text-amber-500">{pendingCount} pending</span>}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="bg-white border border-zinc-200 rounded-xl px-5 py-4
+  flex items-center justify-between text-sm">
+          <span className="text-zinc-500">Total outstanding across all
+  guests</span>
+          <span className="font-bold text-lg text-amber-500
+  tabular-nums">${fmt(totalOutstanding)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  ---
+  src/components/InterestQueue.jsx
+  import { INTEREST_QUEUE, COST_PER_PERSON_WEEK } from '../data';
+
+  const WEEK_COLORS = {
+    May:    'bg-pink-50 text-pink-600 border-pink-200',
+    June:   'bg-amber-50 text-amber-600 border-amber-200',
+    July:   'bg-sky-50 text-sky-600 border-sky-200',
+    August: 'bg-violet-50 text-violet-600 border-violet-200',
+    Sept:   'bg-teal-50 text-teal-600 border-teal-200',
+  };
+
+  const INITIALS_BG = ['bg-blue-500', 'bg-violet-500', 'bg-teal-500',
+  'bg-rose-500'];
+
+  export default function InterestQueue() {
+    return (
+      <div className="space-y-3">
+        <div className="bg-white border border-zinc-200 rounded-xl divide-y
+  divide-zinc-100">
+          {INTEREST_QUEUE.map((person, i) => {
+            const total = person.spots * person.weeks.length *
+  COST_PER_PERSON_WEEK;
+            return (
+              <div key={person.id} className="flex items-center gap-4 px-5 py-4
+  hover:bg-zinc-50 transition-colors">
+                <div className={`w-9 h-9 rounded-full ${INITIALS_BG[i %
+  INITIALS_BG.length]} text-white text-xs font-bold flex items-center 
+  justify-center flex-shrink-0`}>
+                  {person.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-sm font-semibold
+  text-slate-900">{person.name}</span>
+                    <span className="text-xs text-zinc-400">{person.note}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {person.weeks.map(week => (
+                      <span key={week} className={`text-[11px] font-medium px-2 
+  py-0.5 rounded border ${WEEK_COLORS[week]}`}>
+                        {week}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-slate-900 tabular-nums">
+                    ${total.toLocaleString('en-US', { minimumFractionDigits: 2,
+  maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {person.spots} spot{person.spots > 1 ? 's' : ''} ×
+  {person.weeks.length} wk{person.weeks.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="bg-white border border-zinc-200 rounded-xl px-5 py-3.5
+  flex items-center justify-between">
+          <span className="text-sm text-zinc-500">Total potential recovery from
+  queue</span>
+          <span className="text-sm font-bold text-slate-900 tabular-nums">
+            ${INTEREST_QUEUE.reduce((s, p) => s + p.spots * p.weeks.length *
+  COST_PER_PERSON_WEEK, 0)
+              .toLocaleString('en-US', { minimumFractionDigits: 2,
+  maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  ---
+  src/components/ReimbursementTable.jsx
+  import { Check, Clock } from 'lucide-react';
+
+  const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2,
+  maximumFractionDigits: 2 });
+
+  export default function ReimbursementTable({ reimbursements, ownerStats }) {
+    const collected   = reimbursements.filter(r => r.paid).reduce((s, r) => s +
+  r.amount, 0);
+    const outstanding = reimbursements.filter(r => !r.paid).reduce((s, r) => s +
+   r.amount, 0);
+
+    if (reimbursements.length === 0) {
+      return (
+        <div className="bg-white border border-zinc-200 rounded-xl py-16
+  text-center">
+          <p className="text-sm font-medium text-zinc-400">No guests assigned
+  yet</p>
+          <p className="text-xs text-zinc-300 mt-1">Add guests in the Grid to
+  track payments here</p>
+        </div>
+      );
+    }
+
+    const byOwner = ownerStats
+      .map(o => ({ ...o, rows: reimbursements.filter(r => r.owner === o.name)
+  }))
+      .filter(o => o.rows.length > 0);
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white border border-zinc-200 rounded-xl p-5">
+          <div className="grid grid-cols-3 gap-6 divide-x divide-zinc-100">
+            <div>
+              <p className="text-xs font-medium text-zinc-400 uppercase
+  tracking-wider">Entries</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1
+  tabular-nums">{reimbursements.length}</p>
+            </div>
+            <div className="pl-6">
+              <p className="text-xs font-medium text-zinc-400 uppercase
+  tracking-wider">Collected</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1
+  tabular-nums">${fmt(collected)}</p>
+            </div>
+            <div className="pl-6">
+              <p className="text-xs font-medium text-zinc-400 uppercase
+  tracking-wider">Outstanding</p>
+              <p className="text-2xl font-bold text-amber-500 mt-1
+  tabular-nums">${fmt(outstanding)}</p>
+            </div>
+          </div>
+        </div>
+
+        {byOwner.map(owner => {
+          const ownerCollected = owner.rows.filter(r => r.paid).reduce((s, r) =>
+   s + r.amount, 0);
+          const ownerOwed      = owner.rows.filter(r => !r.paid).reduce((s, r)
+  => s + r.amount, 0);
+          return (
+            <div key={owner.name} className="bg-white border border-zinc-200
+  rounded-xl overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3 border-b
+  border-zinc-100 bg-zinc-50">
+                <span className={`w-2 h-2 rounded-full ${owner.dot}
+  flex-shrink-0`} />
+                <span className="text-sm font-semibold
+  text-slate-900">{owner.name}</span>
+                <div className="ml-auto flex items-center gap-4 text-xs
+  text-zinc-400">
+                  <span className="text-emerald-600
+  font-medium">${fmt(ownerCollected)} in</span>
+                  <span className="text-amber-500 font-medium">${fmt(ownerOwed)}
+   pending</span>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100">
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold
+  text-zinc-400 uppercase tracking-wider">Guest</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold
+  text-zinc-400 uppercase tracking-wider">Week</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold
+  text-zinc-400 uppercase tracking-wider hidden sm:table-cell">Room</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold
+  text-zinc-400 uppercase tracking-wider">Amount</th>
+                    <th className="px-5 py-2.5 text-right text-xs font-semibold
+  text-zinc-400 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {owner.rows.map((r, i) => (
+                    <tr key={i} className="hover:bg-zinc-50 transition-colors">
+                      <td className="px-5 py-3 font-medium
+  text-slate-900">{r.guest}</td>
+                      <td className="px-3 py-3">
+                        <span className="font-medium
+  text-slate-700">{r.week}</span>
+                        <span className="block text-xs
+  text-zinc-400">{r.dates}</span>
+                      </td>
+                      <td className="px-3 py-3 text-zinc-400 text-xs hidden
+  sm:table-cell">{r.room}</td>
+                      <td className="px-3 py-3 text-right font-semibold
+  text-slate-900 tabular-nums">${r.amount.toFixed(2)}</td>
+                      <td className="px-5 py-3 text-right">
+                        {r.paid ? (
+                          <span className="inline-flex items-center gap-1
+  text-xs font-semibold text-emerald-600">
+                            <Check className="w-3.5 h-3.5" /> Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1
+  text-xs font-semibold text-amber-500">
+                            <Clock className="w-3.5 h-3.5" /> Pending
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+
+        <div className="bg-white border border-zinc-200 rounded-xl px-5 py-4">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-zinc-500">Total due from guests</span>
+            <span className="font-semibold text-slate-900
+  tabular-nums">${fmt(reimbursements.reduce((s, r) => s + r.amount, 0))}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-zinc-500">Collected</span>
+            <span className="font-semibold text-emerald-600
+  tabular-nums">+${fmt(collected)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm pt-2.5
+  border-t border-zinc-100">
+            <span className="font-semibold text-slate-900">Still
+  outstanding</span>
+            <span className="font-bold text-lg text-amber-500
+  tabular-nums">${fmt(outstanding)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
