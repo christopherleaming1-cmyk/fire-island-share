@@ -1,3 +1,22 @@
+// ─── Firebase ─────────────────────────────────────────────────────────────────
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyCE2TxfDwkA9KB1S_B-EqhSPvFXY0npiTM',
+  authDomain:        'fire-island-manager.firebaseapp.com',
+  databaseURL:       'https://fire-island-manager-default-rtdb.firebaseio.com',
+  projectId:         'fire-island-manager',
+  storageBucket:     'fire-island-manager.firebasestorage.app',
+  messagingSenderId: '864560145681',
+  appId:             '1:864560145681:web:fc219be5b472ddb34998b0',
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db          = getDatabase(firebaseApp);
+const stateRef    = ref(db, 'shareState');
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const WEEKS = [
@@ -46,11 +65,44 @@ const WEEK_TAG_CLASS = {
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const state = {
-  grid: buildInitialGrid(),
-  guestRegistry: {},   // { name: colorIndex }
-  activeTab: 'grid',
-  modal: null,         // { weekId, roomId, slotIdx }
+  grid:          buildInitialGrid(),
+  guestRegistry: {},
+  activeTab:     'grid',
+  modal:         null,
 };
+
+// Push current state up to Firebase
+function persistState() {
+  set(stateRef, {
+    grid:          state.grid,
+    guestRegistry: state.guestRegistry,
+  });
+}
+
+// Restore numeric keys that Firebase converts to strings
+function hydrateGrid(raw) {
+  const grid = {};
+  Object.keys(raw).forEach(wId => {
+    grid[+wId] = {};
+    Object.keys(raw[wId]).forEach(rId => {
+      grid[+wId][+rId] = raw[wId][rId];
+    });
+  });
+  return grid;
+}
+
+// Listen for changes from Firebase — fires on load and on every remote update
+onValue(stateRef, snapshot => {
+  const data = snapshot.val();
+  if (data) {
+    state.grid          = hydrateGrid(data.grid);
+    state.guestRegistry = data.guestRegistry || {};
+  } else {
+    // Database is empty (first ever load) — push the blank initial state
+    persistState();
+  }
+  render();
+});
 
 function buildInitialGrid() {
   const grid = {};
@@ -162,6 +214,7 @@ function saveSlot(name, paid) {
     isOwner,
   };
 
+  persistState();
   closeModal();
   render();
 }
@@ -170,6 +223,7 @@ function togglePaid(weekId, roomId, slotIdx) {
   const slot = state.grid[weekId][roomId][slotIdx];
   if (slot.isOwner) return;
   slot.paid = !slot.paid;
+  persistState();
   render();
 }
 
@@ -185,6 +239,7 @@ function moveGuest(src, dst) {
     state.grid[dst.weekId][dst.roomId][dst.slotIdx] = srcSlot;
     state.grid[src.weekId][src.roomId][src.slotIdx] = dstSlot;
   }
+  persistState();
   render();
 }
 
@@ -771,11 +826,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && state.modal) closeModal();
 });
 
-// Render owner dots in header
+// Render owner dots in header (static, doesn't need Firebase)
 document.getElementById('header-owners').innerHTML = OWNERS.map(o => `
   <div class="header-owner">
     <span class="dot" style="background:${o.color}"></span>
     <span>${o.name}</span>
   </div>`).join('');
-
-render();
